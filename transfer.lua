@@ -1,7 +1,7 @@
 local _, localization = ...
 local L = localization.L
 local _,A=...
--- Data-only parser for the original addon's Lua table exports. Never executes imports.
+-- Data-only parser for yAuras table exports. Never executes imports.
 local function serialize(v)
  if type(v)=="string" then return string.format("%q",v)
  elseif type(v)=="number" or type(v)=="boolean" then return tostring(v)

@@ -308,7 +308,7 @@ function A:StyleTexture(owner,texture,rule,mirror,source)
  end
 end
 -- Reserve a band for each rule, including native buttons and colour helpers.
--- The original addon placed earlier list entries above later entries.
+-- Earlier list entries appear above later entries.
 function A:AuraFrameLevel(id)
  return 128+math.max(0,#yAurasDB.auras-(id or 1))*16
 end

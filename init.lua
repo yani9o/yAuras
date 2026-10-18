@@ -46,7 +46,6 @@ function A:Normalize(t)
    else out[k]=v end
   end
  end
- -- Texture selections saved before the addon rename keep working.
  out.scale=math.max(.1,math.min(10,out.scale)); out.lowdurationvalue=math.max(0,out.lowdurationvalue)
  if out.type~="Buff" and out.type~="Debuff" and out.type~="Cooldown" then out.type="Buff" end
  local units={Player=true,Target=true,Friendly=true,Enemy=true,Focus=true,TargetTarget=true,Pet=true}
@@ -93,7 +92,7 @@ loader:SetScript("OnEvent",function(_,event,name)
   A:RegisterSettings(); A:Refresh()
  end
 end)
-SLASH_YAURAS1="/yauras"; SLASH_YAURAS2="/sa"; SLASH_YAURAS3="/simpleauras"
+SLASH_YAURAS1="/yauras"; SLASH_YAURAS2="/sa"
 SlashCmdList.YAURAS=function() A:OpenEditor() end
 
 function A:LocalizeValue(value)

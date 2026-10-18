@@ -1,8 +1,8 @@
 local _, localization = ...
 local L = localization.L
-local addonName, sA = ...
+local addonName, A = ...
 local gui
-local UI = sA.UI
+local UI = A.UI
 local getn = function(t) return #t end
 local rawCreateFrame = CreateFrame
 local function CreateFrame(kind, name, parent, templates)
@@ -16,7 +16,7 @@ local function CreateFrame(kind, name, parent, templates)
 end
 -- Settings closes special windows when returning to the game menu. Keep our
 -- standalone windows out of that one close pass, then restore Escape support.
-function sA:AddEscapeWindow(name)
+function A:AddEscapeWindow(name)
  if self.settingsIndependent and SettingsPanel and SettingsPanel.IsShown and SettingsPanel:IsShown() then
   self.settingsEscapeNames[name]=true
   return
@@ -24,7 +24,7 @@ function sA:AddEscapeWindow(name)
  for _,entry in ipairs(UISpecialFrames) do if entry==name then return end end
  table.insert(UISpecialFrames,name)
 end
-function sA:KeepEditorIndependent()
+function A:KeepEditorIndependent()
  if not SettingsPanel or not SettingsPanel.IsShown or not SettingsPanel:IsShown() then return end
  self.settingsIndependent=true
  self.settingsEscapeNames=self.settingsEscapeNames or {}
@@ -38,16 +38,16 @@ function sA:KeepEditorIndependent()
  SettingsPanel:HookScript("OnHide",function()
   C_Timer.After(0,function()
    if SettingsPanel:IsShown() then return end
-   sA.settingsIndependent=false
-   for name in pairs(sA.settingsEscapeNames) do sA:AddEscapeWindow(name) end
-   sA.settingsEscapeNames={}
+   A.settingsIndependent=false
+   for name in pairs(A.settingsEscapeNames) do A:AddEscapeWindow(name) end
+   A.settingsEscapeNames={}
   end)
  end)
 end
 
 -- Native Forever window chrome around the existing content layout.
 -- Only configuration windows call this; live/test aura frames are untouched.
-function sA:StyleWindow(frame, title)
+function A:StyleWindow(frame, title)
   if frame.windowStyle then return end
   local chrome = rawCreateFrame("Frame", nil, frame, "PortraitFrameTemplate")
   frame.windowStyle = chrome
@@ -86,7 +86,7 @@ function sA:StyleWindow(frame, title)
 end
 
 -- Configuration portraits are independent of the aura's rendered artwork.
-function sA:GetAuraPortrait(aura)
+function A:GetAuraPortrait(aura)
   local _, portrait = self:Spell(aura.name)
   if not portrait and self.ResolveIDs then
     for spellID in pairs(self:ResolveIDs(aura)) do
@@ -108,7 +108,7 @@ function sA:GetAuraPortrait(aura)
   return portrait or "Interface\\icons\\INV_Misc_QuestionMark"
 end
 
-function sA:SetAuraWindowPortrait(frame,id)
+function A:SetAuraWindowPortrait(frame,id)
   local aura=id and yAurasDB and yAurasDB.auras and yAurasDB.auras[id]
   local chrome=frame.windowStyle
   if not chrome then return end
@@ -121,7 +121,7 @@ function sA:SetAuraWindowPortrait(frame,id)
 end
 
 -- Utility: skin frame with backdrop
-function sA:SkinFrame(frame, bg, border)
+function A:SkinFrame(frame, bg, border)
   if frame.windowStyle or frame.nativeStyle then return end
   if frame:IsObjectType("Button") or frame:IsObjectType("EditBox") then frame:SetBackdrop(nil); return end
   frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
@@ -141,17 +141,17 @@ local function deepCopy(tbl)
 end
 
 -- Create Test frames (used by editor preview)
-function sA:AnchorPreview(frame,x,y)
+function A:AnchorPreview(frame,x,y)
  -- Dragging can replace the relative anchor with a screen anchor family.
  -- Clear that family before reattaching the reused preview to UIParent.
  frame:StopMovingOrSizing();frame:ClearAllPoints()
  frame:SetPoint("CENTER",UIParent,"CENTER",x,y)
 end
-function sA:CreateTestAuras()
+function A:CreateTestAuras()
 
-	if not sA.SettingsLoaded then return end
+	if not A.SettingsLoaded then return end
 
-	if sA.TestAura then return end
+	if A.TestAura then return end
 	local TestAura = CreateFrame("Frame", "yAurasTest", UIParent)
 	TestAura:SetFrameStrata("BACKGROUND")
 	TestAura:SetFrameLevel(128)
@@ -174,21 +174,21 @@ function sA:CreateTestAuras()
 	dragger:SetBackdropBorderColor(0, 1, 0, 0.5) -- Green, semi-transparent
 
 	dragger:SetScript("OnDragStart", function()
-      sA:StartAuraDrag(TestAura,gui.auraEdit,true)
+      A:StartAuraDrag(TestAura,gui.auraEdit,true)
     end)
     dragger:SetScript("OnDragStop", function()
-      sA:StopAuraDrag();sA:Refresh()
+      A:StopAuraDrag();A:Refresh()
     end)
     dragger:SetScript("OnHide", function()
-      if sA.activeAuraDrag and sA.activeAuraDrag.frame==TestAura then sA:StopAuraDrag() end
+      if A.activeAuraDrag and A.activeAuraDrag.frame==TestAura then A:StopAuraDrag() end
     end)
     TestAura:SetScript("OnHide", function()
-      if sA.activeAuraDrag and sA.activeAuraDrag.frame==TestAura then sA:StopAuraDrag() end
+      if A.activeAuraDrag and A.activeAuraDrag.frame==TestAura then A:StopAuraDrag() end
     end)
 
-	sA.TestAura = TestAura
+	A.TestAura = TestAura
 	dragger:Hide()
-	sA.draggers[0] = dragger
+	A.draggers[0] = dragger
 	
 	local TestAuraDual = CreateFrame("Frame", "yAurasTestDual", UIParent)
 	TestAuraDual:SetFrameStrata("BACKGROUND")
@@ -202,29 +202,29 @@ function sA:CreateTestAuras()
 	TestAuraDual.stackstext:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
 	TestAuraDual.stackstext:SetPoint("TOPLEFT", TestAuraDual.durationtext, "CENTER", 1, -6)
 	TestAuraDual:Hide()
-	sA.TestAuraDual = TestAuraDual
+	A.TestAuraDual = TestAuraDual
 	
 end
 
 -- Main GUI frame
 if not gui then
   gui = CreateFrame("Frame", "yAurasGUI", UIParent)
-  sA.gui = gui
+  A.gui = gui
   gui:SetFrameStrata("HIGH")
   gui:SetPoint("CENTER", UIParent, "CENTER", -155, 0)
   gui:SetWidth(300)
   gui:SetHeight(450)
   gui:SetMovable(true)
   gui:EnableMouse(true)
-  sA:StyleWindow(gui, sA.title)
+  A:StyleWindow(gui, A.title)
 
   local title = gui:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   title:SetPoint("TOP", 0, -5)
-  title:SetText(sA.title)
+  title:SetText(A.title)
   title:Hide()
 
   gui:Hide()
-  sA:AddEscapeWindow("yAurasGUI")
+  A:AddEscapeWindow("yAurasGUI")
 end
 
 -- Add button
@@ -232,12 +232,12 @@ local addBtn = CreateFrame("Button", nil, gui)
 addBtn:SetPoint("TOPLEFT", 58, 7)
 addBtn:SetWidth(20)
 addBtn:SetHeight(20)
-sA:SkinFrame(addBtn, {0.2, 0.2, 0.2, 1})
+A:SkinFrame(addBtn, {0.2, 0.2, 0.2, 1})
 addBtn.text = addBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 addBtn.text:SetPoint("CENTER", addBtn, "CENTER", 0, 0)
 addBtn.text:SetText("+")
 addBtn:SetFontString(addBtn.text)
-addBtn:SetScript("OnClick", function() sA:AddAura() end)
+addBtn:SetScript("OnClick", function() A:AddAura() end)
 addBtn:SetScript("OnEnter", function() addBtn:SetBackdropColor(0.1, 0.4, 0.1, 1) end)
 addBtn:SetScript("OnLeave", function() addBtn:SetBackdropColor(0.2, 0.2, 0.2, 1) end)
 
@@ -246,11 +246,11 @@ local exportAllBtn = CreateFrame("Button", nil, gui)
 exportAllBtn:SetPoint("TOPLEFT", addBtn, "TOPRIGHT", 5, 0)
 exportAllBtn:SetWidth(20)
 exportAllBtn:SetHeight(20)
-sA:SkinFrame(exportAllBtn, {0.2, 0.2, 0.2, 1})
+A:SkinFrame(exportAllBtn, {0.2, 0.2, 0.2, 1})
 exportAllBtn.text = exportAllBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 exportAllBtn.text:SetPoint("CENTER", exportAllBtn, "CENTER", 0, 0)
 exportAllBtn.text:SetText("e")
-exportAllBtn:SetScript("OnClick", function() sA:ExportAllAuras() end)
+exportAllBtn:SetScript("OnClick", function() A:ExportAllAuras() end)
 exportAllBtn:SetScript("OnEnter", function() exportAllBtn:SetBackdropColor(0.5, 0.5, 0.5, 1) end)
 exportAllBtn:SetScript("OnLeave", function() exportAllBtn:SetBackdropColor(0.2, 0.2, 0.2, 1) end)
 
@@ -259,11 +259,11 @@ local importBtn = CreateFrame("Button", nil, gui)
 importBtn:SetPoint("TOPLEFT", exportAllBtn, "TOPRIGHT", 5, 0)
 importBtn:SetWidth(20)
 importBtn:SetHeight(20)
-sA:SkinFrame(importBtn, {0.2, 0.2, 0.2, 1})
+A:SkinFrame(importBtn, {0.2, 0.2, 0.2, 1})
 importBtn.text = importBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 importBtn.text:SetPoint("CENTER", importBtn, "CENTER", 0, 0)
 importBtn.text:SetText("i")
-importBtn:SetScript("OnClick", function() sA:ShowImportFrame() end)
+importBtn:SetScript("OnClick", function() A:ShowImportFrame() end)
 importBtn:SetScript("OnEnter", function() importBtn:SetBackdropColor(0.5, 0.5, 0.5, 1) end)
 importBtn:SetScript("OnLeave", function() importBtn:SetBackdropColor(0.2, 0.2, 0.2, 1) end)
 
@@ -272,15 +272,15 @@ local closeBtn = CreateFrame("Button", nil, gui)
 closeBtn:SetPoint("TOPRIGHT", -2, -2)
 closeBtn:SetWidth(20)
 closeBtn:SetHeight(20)
-sA:SkinFrame(closeBtn, {0.2, 0.2, 0.2, 1})
+A:SkinFrame(closeBtn, {0.2, 0.2, 0.2, 1})
 closeBtn.text = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 closeBtn.text:SetPoint("CENTER", 0.5, 1)
 closeBtn.text:SetText("x")
 closeBtn:SetFontString(closeBtn.text)
 closeBtn:SetScript("OnClick", function()
   gui:Hide()
-  if sA.TestAura then sA.TestAura:Hide() end
-  if sA.TestAuraDual then sA.TestAuraDual:Hide() end
+  if A.TestAura then A.TestAura:Hide() end
+  if A.TestAuraDual then A.TestAuraDual:Hide() end
 end)
 closeBtn:SetScript("OnEnter", function() closeBtn:SetBackdropColor(0.5, 0.5, 0.5, 1) end)
 closeBtn:SetScript("OnLeave", function() closeBtn:SetBackdropColor(0.2, 0.2, 0.2, 1) end)
@@ -345,7 +345,7 @@ listScroll:SetScript("OnVerticalScroll", function(_, value) SetListScroll(value)
 listScroll:SetScript("OnMouseWheel", ScrollAuraList)
 listScrollbar:SetScript("OnMouseWheel", ScrollAuraList)
 listScroll:SetScript("OnSizeChanged", UpdateListScrollRange)
-function sA:EnsureAuraListRowVisible(id)
+function A:EnsureAuraListRowVisible(id)
   local top = (id - 1) * AURA_ROW_STEP
   local offset = listScroll:GetVerticalScroll()
   if top < offset then SetListScroll(top)
@@ -355,9 +355,9 @@ function sA:EnsureAuraListRowVisible(id)
 end
 
 -- Refresh list of configured auras
-function sA:RefreshAuraList()
+function A:RefreshAuraList()
 
-  if not sA.SettingsLoaded then return end
+  if not A.SettingsLoaded then return end
 
   -- hide old rows
   for _, entry in ipairs(gui.list or {}) do entry:Hide() end
@@ -435,13 +435,13 @@ function sA:RefreshAuraList()
     -- click to edit
     row:SetScript("OnClick", function()
       if gui.editor then
-        if sA.TestAura then sA.TestAura:Hide() end
-        if sA.TestAuraDual then sA.TestAuraDual:Hide() end
+        if A.TestAura then A.TestAura:Hide() end
+        if A.TestAuraDual then A.TestAuraDual:Hide() end
         gui.editor:Hide()
         gui.editor = nil
       end
-      sA:CreateTestAuras()
-      sA:EditAura(id)
+      A:CreateTestAuras()
+      A:EditAura(id)
     end)
 
     -- up button (swap with previous)
@@ -451,22 +451,22 @@ function sA:RefreshAuraList()
       up:SetWidth(15)
       up:SetHeight(15)
       up:ClearAllPoints();up:SetPoint("RIGHT", row, "RIGHT", -25, 0)
-      sA:SkinFrame(up, {0.15, 0.15, 0.15, 1})
+      A:SkinFrame(up, {0.15, 0.15, 0.15, 1})
       UI.Arrow(up, true)
       UI.Tooltip(up,L.MOVE_UP)
 
 
       up:SetScript("OnClick", function()
         yAurasDB.auras[id], yAurasDB.auras[id - 1] = yAurasDB.auras[id - 1], yAurasDB.auras[id]
-        sA:InvalidateAll()
-        sA:RefreshAuraList()
+        A:InvalidateAll()
+        A:RefreshAuraList()
         if gui.editor then
-          if sA.TestAura then sA.TestAura:Hide() end
-          if sA.TestAuraDual then sA.TestAuraDual:Hide() end
+          if A.TestAura then A.TestAura:Hide() end
+          if A.TestAuraDual then A.TestAuraDual:Hide() end
           gui.editor:Hide()
           gui.editor = nil
-          sA:EditAura(id - 1)
-          sA:EnsureAuraListRowVisible(id - 1)
+          A:EditAura(id - 1)
+          A:EnsureAuraListRowVisible(id - 1)
         end
       end)
     end
@@ -478,22 +478,22 @@ function sA:RefreshAuraList()
       down:SetWidth(15)
       down:SetHeight(15)
       down:ClearAllPoints();down:SetPoint("RIGHT", row, "RIGHT", -5, 0)
-      sA:SkinFrame(down, {0.15, 0.15, 0.15, 1})
+      A:SkinFrame(down, {0.15, 0.15, 0.15, 1})
       UI.Arrow(down, false)
       UI.Tooltip(down,L.MOVE_DOWN)
 
 
       down:SetScript("OnClick", function()
         yAurasDB.auras[id], yAurasDB.auras[id + 1] = yAurasDB.auras[id + 1], yAurasDB.auras[id]
-        sA:InvalidateAll()
-        sA:RefreshAuraList()
+        A:InvalidateAll()
+        A:RefreshAuraList()
         if gui.editor then
-          if sA.TestAura then sA.TestAura:Hide() end
-          if sA.TestAuraDual then sA.TestAuraDual:Hide() end
+          if A.TestAura then A.TestAura:Hide() end
+          if A.TestAuraDual then A.TestAuraDual:Hide() end
           gui.editor:Hide()
           gui.editor = nil
-          sA:EditAura(id + 1)
-          sA:EnsureAuraListRowVisible(id + 1)
+          A:EditAura(id + 1)
+          A:EnsureAuraListRowVisible(id + 1)
         end
       end)
     end
@@ -506,72 +506,72 @@ function sA:RefreshAuraList()
 end
 
 -- Save aura data from editor
-function sA:SaveAura(id)
+function A:SaveAura(id)
  local ed = gui.editor
  local data = yAurasDB.auras[id]
  if not ed or not data then return end
  local controls = {enabled="enabled",myCast="myCast",autodetect="autoDetect",duration="duration",stacks="stacks",lowduration="lowduration",inCombat="inCombat",outCombat="outCombat",inParty="inParty",inRaid="inRaid",invert="invert",dual="dual",onlyWithTarget="onlyWithTarget"}
  for key,control in pairs(controls) do data[key]=ed[control].value end
  for key,control in pairs({name="name",texture="texturePath",scale="scale",xpos="x",ypos="y",lowdurationvalue="lowdurationvalue"}) do
-  local value=ed[control]:GetText(); data[key]=type(sA.defaults[key])=="number" and (tonumber(value) or sA.defaults[key]) or value
+  local value=ed[control]:GetText(); data[key]=type(A.defaults[key])=="number" and (tonumber(value) or A.defaults[key]) or value
  end
  data.type=ed.typeButton.value or data.type; data.unit=ed.unitButton.value or data.unit; data.showCD=ed.showCD.value or data.showCD
  data.targetType=ed.targetType.value or data.targetType
  data.auracolor=ed.auracolor; data.lowdurationcolor=ed.lowdurationcolor
- yAurasDB.auras[id]=sA:Normalize(data)
- sA:UpdateDetectedTexture(yAurasDB.auras[id])
+ yAurasDB.auras[id]=A:Normalize(data)
+ A:UpdateDetectedTexture(yAurasDB.auras[id])
  for _,control in ipairs({"name","texturePath","scale","x","y","lowdurationvalue"}) do ed[control]:ClearFocus() end
- sA:InvalidateRule(id); sA:EditAura(id); sA:Refresh()
+ A:InvalidateRule(id); A:EditAura(id); A:Refresh()
 end
 
 -- Add new aura (optionally copy from existing)
-function sA:AddAura(copyId)
+function A:AddAura(copyId)
   table.insert(yAurasDB.auras, {})
   local newId = getn(yAurasDB.auras)
   if copyId and yAurasDB.auras[copyId] then
     yAurasDB.auras[newId] = deepCopy(yAurasDB.auras[copyId])
   else
-    yAurasDB.auras[newId] = sA:Copy(sA.defaults)
+    yAurasDB.auras[newId] = A:Copy(A.defaults)
   end
   if gui.editor and gui.editor:IsShown() then
     gui.editor:Hide()
     gui.editor = nil
-    if sA.TestAura then sA.TestAura:Hide() end
-    if sA.TestAuraDual then sA.TestAuraDual:Hide() end
+    if A.TestAura then A.TestAura:Hide() end
+    if A.TestAuraDual then A.TestAuraDual:Hide() end
   end
-  sA:UpdateAuras()
-  sA:EditAura(newId)
-  sA:EnsureAuraListRowVisible(newId)
+  A:UpdateAuras()
+  A:EditAura(newId)
+  A:EnsureAuraListRowVisible(newId)
 end
 
 -- Editor window / show and build controls
-function sA:EditAura(id)
+function A:EditAura(id)
   local aura = yAurasDB.auras[id]
   if not aura then return end
-  sA:CreateTestAuras()
+  A:CreateTestAuras()
   gui.auraEdit = id
-  sA.TestAura:SetMovable(false)
+  A.TestAura:SetMovable(false)
 
-  local ed = sA.editor
+  local ed = A.editor
   if not ed then
     ed = CreateFrame("Frame", "yAurasEdit", UIParent)
-    sA.editor = ed
+    A.editor = ed
     ed:SetWidth(460)
     ed:SetHeight(485)
     ed:SetPoint("LEFT", gui, "RIGHT", 36, 0)
-    sA:StyleWindow(ed, sA.title)
+    A:StyleWindow(ed, A.title)
     ed:SetMovable(true)
     ed:EnableMouse(true)
     ed:SetScript("OnHide", function()
-      sA:StopAuraDrag()
+      A:StopAuraDrag()
       gui.editor=nil; gui.auraEdit=nil
-      sA.TestAura:Hide(); sA.TestAuraDual:Hide()
+      A.TestAura:Hide(); A.TestAuraDual:Hide()
       for _,key in ipairs({"typeButton","unitButton","showCD","targetType"}) do
         if ed[key] and ed[key].menu then ed[key].menu:Hide() end
       end
       if ed.browseFrame then ed.browseFrame:Hide() end
     end)
-    sA:AddEscapeWindow("yAurasEdit")
+    A:AddEscapeWindow("yAurasEdit")
 
     ed.title = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.title:SetPoint("TOP", ed, "TOP", 0, -5)
@@ -583,7 +583,7 @@ function sA:EditAura(id)
     ed.enabled:SetWidth(16)
     ed.enabled:SetHeight(16)
     ed.enabled:SetPoint("TOPLEFT", ed, "TOPLEFT", 12.5, -35)
-    sA:SkinFrame(ed.enabled, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.enabled, {0.15,0.15,0.15,1})
     ed.enabled:SetScript("OnEnter", function() ed.enabled:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.enabled:SetScript("OnLeave", function() ed.enabled:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.enabled)
@@ -598,7 +598,7 @@ function sA:EditAura(id)
     ed.enabled:SetScript("OnClick", function(self)
       ed.enabled.value = 1 - (ed.enabled.value or 0)
       if ed.enabled.value == 1 then ed.enabled.checked:Show() else ed.enabled.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.enabledLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.enabledLabel:SetPoint("LEFT", ed.enabled, "RIGHT", 5, 0)
@@ -610,7 +610,7 @@ function sA:EditAura(id)
 		ed.myCast:SetWidth(16)
 		ed.myCast:SetHeight(16)
 		ed.myCast:SetPoint("TOPLEFT", ed, "TOPLEFT", 240, -35)
-		sA:SkinFrame(ed.myCast, {0.15,0.15,0.15,1})
+		A:SkinFrame(ed.myCast, {0.15,0.15,0.15,1})
 		ed.myCast:SetScript("OnEnter", function() ed.myCast:SetBackdropColor(0.5,0.5,0.5,1) end)
 		ed.myCast:SetScript("OnLeave", function() ed.myCast:SetBackdropColor(0.15,0.15,0.15,1) end)
 		UI.Check(ed.myCast)
@@ -625,7 +625,7 @@ function sA:EditAura(id)
 		ed.myCast:SetScript("OnClick", function(self)
 		  ed.myCast.value = 1 - (ed.myCast.value or 0)
 		  if ed.myCast.value == 1 then ed.myCast.checked:Show() else ed.myCast.checked:Hide() end
-		  sA:SaveAura(gui.auraEdit)
+		  A:SaveAura(gui.auraEdit)
 		end)
 		ed.myCastLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		ed.myCastLabel:SetPoint("LEFT", ed.myCast, "RIGHT", 5, 0)
@@ -650,7 +650,7 @@ function sA:EditAura(id)
 
 
 
-    ed.name:SetScript("OnEnterPressed", function() sA:SaveAura(gui.auraEdit) end)
+    ed.name:SetScript("OnEnterPressed", function() A:SaveAura(gui.auraEdit) end)
 
     -- Separator
     local lineone = ed:CreateTexture(nil, "OVERLAY")
@@ -669,7 +669,7 @@ function sA:EditAura(id)
     ed.auracolorpicker:SetWidth(24)
     ed.auracolorpicker:SetHeight(12)
     ed.auracolorpicker:SetPoint("LEFT", ed.texLabel, "RIGHT", 5, 0)
-    sA:SkinFrame(ed.auracolorpicker, {1,1,1,1})
+    A:SkinFrame(ed.auracolorpicker, {1,1,1,1})
     ed.auracolorpicker.prev = ed.auracolorpicker:CreateTexture(nil, "OVERLAY")
     ed.auracolorpicker.prev:SetAllPoints(ed.auracolorpicker)
 
@@ -678,7 +678,7 @@ function sA:EditAura(id)
     ed.autoDetect:SetWidth(16)
     ed.autoDetect:SetHeight(16)
     ed.autoDetect:SetPoint("LEFT", ed.texLabel, "LEFT", 228, 0)
-    sA:SkinFrame(ed.autoDetect, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.autoDetect, {0.15,0.15,0.15,1})
     ed.autoDetect:SetScript("OnEnter", function() ed.autoDetect:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.autoDetect:SetScript("OnLeave", function() ed.autoDetect:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.autoDetect)
@@ -693,7 +693,7 @@ function sA:EditAura(id)
     ed.autoDetect:SetScript("OnClick", function(self)
       ed.autoDetect.value = 1 - (ed.autoDetect.value or 0)
       if ed.autoDetect.value == 1 then ed.autoDetect.checked:Show() else ed.autoDetect.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
 
     ed.autoLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -713,7 +713,7 @@ function sA:EditAura(id)
 
 
 
-    ed.texturePath:SetScript("OnEnterPressed", function() sA:SaveAura(gui.auraEdit) end)
+    ed.texturePath:SetScript("OnEnterPressed", function() A:SaveAura(gui.auraEdit) end)
     ed.texturePath:SetScript("OnEnter", function(owner)
       GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
       GameTooltip:SetText(L.ICON_PATH_HELP_TITLE)
@@ -726,7 +726,7 @@ function sA:EditAura(id)
     ed.browseBtn:SetWidth(100)
     ed.browseBtn:SetHeight(20)
     ed.browseBtn:SetPoint("LEFT", ed.texturePath, "RIGHT", 15, 0)
-    sA:SkinFrame(ed.browseBtn, {0.2,0.2,0.2,1})
+    A:SkinFrame(ed.browseBtn, {0.2,0.2,0.2,1})
     ed.browseBtn.text = ed.browseBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.browseBtn.text:SetPoint("CENTER", ed.browseBtn, "CENTER", 0, 0)
     ed.browseBtn.text:SetText(L.BROWSE)
@@ -749,7 +749,7 @@ function sA:EditAura(id)
 
 
 
-    ed.scale:SetScript("OnEnterPressed", function() sA:SaveAura(gui.auraEdit) end)
+    ed.scale:SetScript("OnEnterPressed", function() A:SaveAura(gui.auraEdit) end)
 
     ed.xLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.xLabel:SetPoint("LEFT", ed.scaleLabel, "LEFT", 145, 0)
@@ -766,7 +766,7 @@ function sA:EditAura(id)
 
 
 
-    ed.x:SetScript("OnEnterPressed", function() sA:SaveAura(gui.auraEdit) end)
+    ed.x:SetScript("OnEnterPressed", function() A:SaveAura(gui.auraEdit) end)
 
     ed.yLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.yLabel:SetPoint("LEFT", ed.scaleLabel, "LEFT", 290, 0)
@@ -783,14 +783,14 @@ function sA:EditAura(id)
 
 
 
-    ed.y:SetScript("OnEnterPressed", function() sA:SaveAura(gui.auraEdit) end)
+    ed.y:SetScript("OnEnterPressed", function() A:SaveAura(gui.auraEdit) end)
 
     -- Duration / stacks checkboxes
     ed.duration = CreateFrame("CheckButton", nil, ed, "UICheckButtonTemplate,BackdropTemplate")
     ed.duration:SetWidth(16)
     ed.duration:SetHeight(16)
     ed.duration:SetPoint("TOPLEFT", ed.scaleLabel, "BOTTOMLEFT", 0, -15)
-    sA:SkinFrame(ed.duration, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.duration, {0.15,0.15,0.15,1})
     ed.duration:SetScript("OnEnter", function() ed.duration:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.duration:SetScript("OnLeave", function() ed.duration:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.duration)
@@ -805,7 +805,7 @@ function sA:EditAura(id)
     ed.duration:SetScript("OnClick", function(self)
       ed.duration.value = 1 - (ed.duration.value or 0)
       if ed.duration.value == 1 then ed.duration.checked:Show() else ed.duration.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.durationLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.durationLabel:SetPoint("LEFT", ed.duration, "RIGHT", 5, 0)
@@ -815,7 +815,7 @@ function sA:EditAura(id)
     ed.stacks:SetWidth(16)
     ed.stacks:SetHeight(16)
     ed.stacks:SetPoint("LEFT", ed.duration, "LEFT", 228, 0)
-    sA:SkinFrame(ed.stacks, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.stacks, {0.15,0.15,0.15,1})
     ed.stacks:SetScript("OnEnter", function() ed.stacks:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.stacks:SetScript("OnLeave", function() ed.stacks:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.stacks)
@@ -830,7 +830,7 @@ function sA:EditAura(id)
     ed.stacks:SetScript("OnClick", function(self)
       ed.stacks.value = 1 - (ed.stacks.value or 0)
       if ed.stacks.value == 1 then ed.stacks.checked:Show() else ed.stacks.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.stacksLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.stacksLabel:SetPoint("LEFT", ed.stacks, "RIGHT", 5, 0)
@@ -857,21 +857,21 @@ function sA:EditAura(id)
     ed.typeButton:SetWidth(80)
     ed.typeButton:SetHeight(20)
     ed.typeButton:SetPoint("LEFT", ed.typeLabel, "RIGHT", 5, 0)
-    sA:SkinFrame(ed.typeButton, {0.2,0.2,0.2,1})
+    A:SkinFrame(ed.typeButton, {0.2,0.2,0.2,1})
 
 
 
     ed.typeButton.nativeStyle = true
     UI.DropdownLayout(ed.typeButton)
-    ed.typeButton:SetSelectionText(function() return sA:LocalizeValue(ed.typeButton.value) or "" end)
+    ed.typeButton:SetSelectionText(function() return A:LocalizeValue(ed.typeButton.value) or "" end)
     ed.typeButton:SetupMenu(function(_,root)
       for _,value in ipairs({"Buff","Debuff","Cooldown"}) do
         local choice=value
-        root:CreateRadio(sA:LocalizeValue(choice),function() return ed.typeButton.value==choice end,function()
+        root:CreateRadio(A:LocalizeValue(choice),function() return ed.typeButton.value==choice end,function()
           ed.typeButton.value=choice
-          UI.DropdownLabel(ed.typeButton,sA:LocalizeValue(choice))
+          UI.DropdownLabel(ed.typeButton,A:LocalizeValue(choice))
           yAurasDB.auras[gui.auraEdit].type=choice
-          sA:SaveAura(gui.auraEdit)
+          A:SaveAura(gui.auraEdit)
         end)
       end
     end)
@@ -884,21 +884,21 @@ function sA:EditAura(id)
 	ed.unitButton:SetWidth(120)
 	ed.unitButton:SetHeight(20)
 	ed.unitButton:SetPoint("LEFT", ed.unitLabel, "RIGHT", 5, 0)
-	sA:SkinFrame(ed.unitButton, {0.2,0.2,0.2,1})
+	A:SkinFrame(ed.unitButton, {0.2,0.2,0.2,1})
 
 
 
 	ed.unitButton.nativeStyle = true
     UI.DropdownLayout(ed.unitButton)
-    ed.unitButton:SetSelectionText(function() return sA:LocalizeValue(ed.unitButton.value) or "" end)
+    ed.unitButton:SetSelectionText(function() return A:LocalizeValue(ed.unitButton.value) or "" end)
     ed.unitButton:SetupMenu(function(_,root)
       for _,value in ipairs({"Player","Target","Focus","TargetTarget","Friendly","Enemy"}) do
         local choice=value
-        root:CreateRadio(sA:LocalizeValue(choice),function() return ed.unitButton.value==choice end,function()
+        root:CreateRadio(A:LocalizeValue(choice),function() return ed.unitButton.value==choice end,function()
           ed.unitButton.value=choice
-          UI.DropdownLabel(ed.unitButton,sA:LocalizeValue(choice))
+          UI.DropdownLabel(ed.unitButton,A:LocalizeValue(choice))
           yAurasDB.auras[gui.auraEdit].unit=choice
-          sA:SaveAura(gui.auraEdit)
+          A:SaveAura(gui.auraEdit)
         end)
       end
     end)
@@ -908,21 +908,21 @@ function sA:EditAura(id)
 	ed.showCD:SetWidth(80)
 	ed.showCD:SetHeight(20)
 	ed.showCD:SetPoint("LEFT", ed.typeLabel, "LEFT", 228, 0)
-	sA:SkinFrame(ed.showCD, {0.2,0.2,0.2,1})
+	A:SkinFrame(ed.showCD, {0.2,0.2,0.2,1})
 
 
 
 	ed.showCD.nativeStyle = true
     UI.DropdownLayout(ed.showCD)
-    ed.showCD:SetSelectionText(function() return sA:LocalizeValue(ed.showCD.value) or "" end)
+    ed.showCD:SetSelectionText(function() return A:LocalizeValue(ed.showCD.value) or "" end)
     ed.showCD:SetupMenu(function(_,root)
       for _,value in ipairs({"Always","CD","No CD"}) do
         local choice=value
-        root:CreateRadio(sA:LocalizeValue(choice),function() return ed.showCD.value==choice end,function()
+        root:CreateRadio(A:LocalizeValue(choice),function() return ed.showCD.value==choice end,function()
           ed.showCD.value=choice
-          UI.DropdownLabel(ed.showCD,sA:LocalizeValue(choice))
+          UI.DropdownLabel(ed.showCD,A:LocalizeValue(choice))
           yAurasDB.auras[gui.auraEdit].showCD=choice
-          sA:SaveAura(gui.auraEdit)
+          A:SaveAura(gui.auraEdit)
         end)
       end
     end)
@@ -932,7 +932,7 @@ function sA:EditAura(id)
     ed.onlyWithTarget = CreateFrame("CheckButton", nil, ed, "UICheckButtonTemplate,BackdropTemplate")
     ed.onlyWithTarget:SetSize(16, 16)
     ed.onlyWithTarget:SetPoint("TOPLEFT", ed.typeLabel, "BOTTOMLEFT", 0, -15)
-    sA:SkinFrame(ed.onlyWithTarget, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.onlyWithTarget, {0.15,0.15,0.15,1})
     ed.onlyWithTarget:SetScript("OnEnter", function(self) self:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.onlyWithTarget:SetScript("OnLeave", function(self) self:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.onlyWithTarget)
@@ -945,7 +945,7 @@ function sA:EditAura(id)
     ed.onlyWithTarget.value = 0
     ed.onlyWithTarget:SetScript("OnClick", function(self)
       self.value = 1 - (self.value or 0)
-      sA:SaveAura(gui.auraEdit)
+      A:SaveAura(gui.auraEdit)
     end)
     ed.onlyWithTargetLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.onlyWithTargetLabel:SetPoint("LEFT", ed.onlyWithTarget, "RIGHT", 5, 0)
@@ -954,21 +954,21 @@ function sA:EditAura(id)
     ed.targetType = CreateFrame("DropdownButton", nil, ed, "WowStyle1DropdownTemplate,BackdropTemplate")
     ed.targetType:SetSize(120, 20)
     ed.targetType:SetPoint("LEFT", ed.onlyWithTarget, "LEFT", 228, 0)
-    sA:SkinFrame(ed.targetType, {0.2,0.2,0.2,1})
+    A:SkinFrame(ed.targetType, {0.2,0.2,0.2,1})
 
 
 
     ed.targetType.nativeStyle = true
     UI.DropdownLayout(ed.targetType)
-    ed.targetType:SetSelectionText(function() return sA:LocalizeValue(ed.targetType.value) or "" end)
+    ed.targetType:SetSelectionText(function() return A:LocalizeValue(ed.targetType.value) or "" end)
     ed.targetType:SetupMenu(function(_,root)
       for _,value in ipairs({"Any","Friendly","Enemy","None"}) do
         local choice=value
-        root:CreateRadio(sA:LocalizeValue(choice),function() return ed.targetType.value==choice end,function()
+        root:CreateRadio(A:LocalizeValue(choice),function() return ed.targetType.value==choice end,function()
           ed.targetType.value=choice
-          UI.DropdownLabel(ed.targetType,sA:LocalizeValue(choice))
+          UI.DropdownLabel(ed.targetType,A:LocalizeValue(choice))
           yAurasDB.auras[gui.auraEdit].targetType=choice
-          sA:SaveAura(gui.auraEdit)
+          A:SaveAura(gui.auraEdit)
         end)
       end
     end)
@@ -978,7 +978,7 @@ function sA:EditAura(id)
     ed.lowduration:SetWidth(16)
     ed.lowduration:SetHeight(16)
     ed.lowduration:SetPoint("TOPLEFT", ed.onlyWithTarget, "BOTTOMLEFT", 0, -15)
-    sA:SkinFrame(ed.lowduration, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.lowduration, {0.15,0.15,0.15,1})
     ed.lowduration:SetScript("OnEnter", function() ed.lowduration:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.lowduration:SetScript("OnLeave", function() ed.lowduration:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.lowduration)
@@ -993,7 +993,7 @@ function sA:EditAura(id)
     ed.lowduration:SetScript("OnClick", function(self)
       ed.lowduration.value = 1 - (ed.lowduration.value or 0)
       if ed.lowduration.value == 1 then ed.lowduration.checked:Show() else ed.lowduration.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.lowdurationLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.lowdurationLabel:SetPoint("LEFT", ed.lowduration, "RIGHT", 5, 0)
@@ -1003,7 +1003,7 @@ function sA:EditAura(id)
     ed.lowdurationcolorpicker:SetWidth(24)
     ed.lowdurationcolorpicker:SetHeight(12)
     ed.lowdurationcolorpicker:SetPoint("LEFT", ed.lowdurationLabel, "RIGHT", 10, 0)
-    sA:SkinFrame(ed.lowdurationcolorpicker, {1,1,1,1})
+    A:SkinFrame(ed.lowdurationcolorpicker, {1,1,1,1})
     ed.lowdurationcolorpicker.prev = ed.lowdurationcolorpicker:CreateTexture(nil, "OVERLAY")
     ed.lowdurationcolorpicker.prev:SetAllPoints(ed.lowdurationcolorpicker)
 
@@ -1023,7 +1023,7 @@ function sA:EditAura(id)
 
 
 
-    ed.lowdurationvalue:SetScript("OnEnterPressed", function() sA:SaveAura(gui.auraEdit) end)
+    ed.lowdurationvalue:SetScript("OnEnterPressed", function() A:SaveAura(gui.auraEdit) end)
 
     ed.lowdurationLabelsuffix = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.lowdurationLabelsuffix:SetPoint("LEFT", ed.lowdurationvalue, "RIGHT", 2, 0)
@@ -1034,7 +1034,7 @@ function sA:EditAura(id)
     ed.inCombat:SetWidth(16)
     ed.inCombat:SetHeight(16)
     ed.inCombat:SetPoint("TOPLEFT", ed.lowduration, "BOTTOMLEFT", 0, -15)
-    sA:SkinFrame(ed.inCombat, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.inCombat, {0.15,0.15,0.15,1})
     ed.inCombat:SetScript("OnEnter", function() ed.inCombat:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.inCombat:SetScript("OnLeave", function() ed.inCombat:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.inCombat)
@@ -1049,7 +1049,7 @@ function sA:EditAura(id)
     ed.inCombat:SetScript("OnClick", function(self)
       ed.inCombat.value = 1 - (ed.inCombat.value or 0)
       if ed.inCombat.value == 1 then ed.inCombat.checked:Show() else ed.inCombat.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
 
     ed.incombatLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -1061,7 +1061,7 @@ function sA:EditAura(id)
     ed.outCombat:SetWidth(16)
     ed.outCombat:SetHeight(16)
     ed.outCombat:SetPoint("LEFT", ed.inCombat, "LEFT", 228, 0)
-    sA:SkinFrame(ed.outCombat, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.outCombat, {0.15,0.15,0.15,1})
     ed.outCombat:SetScript("OnEnter", function() ed.outCombat:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.outCombat:SetScript("OnLeave", function() ed.outCombat:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.outCombat)
@@ -1076,7 +1076,7 @@ function sA:EditAura(id)
     ed.outCombat:SetScript("OnClick", function(self)
       ed.outCombat.value = 1 - (ed.outCombat.value or 0)
       if ed.outCombat.value == 1 then ed.outCombat.checked:Show() else ed.outCombat.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
 
     ed.outcombatLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -1088,7 +1088,7 @@ function sA:EditAura(id)
     ed.inParty:SetWidth(16)
     ed.inParty:SetHeight(16)
     ed.inParty:SetPoint("TOPLEFT", ed.inCombat, "BOTTOMLEFT", 0, -15)
-    sA:SkinFrame(ed.inParty, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.inParty, {0.15,0.15,0.15,1})
     ed.inParty:SetScript("OnEnter", function() ed.inParty:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.inParty:SetScript("OnLeave", function() ed.inParty:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.inParty)
@@ -1103,7 +1103,7 @@ function sA:EditAura(id)
     ed.inParty:SetScript("OnClick", function(self)
       ed.inParty.value = 1 - (ed.inParty.value or 0)
       if ed.inParty.value == 1 then ed.inParty.checked:Show() else ed.inParty.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.inpartyLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.inpartyLabel:SetPoint("LEFT", ed.inParty, "RIGHT", 5, 1)
@@ -1114,7 +1114,7 @@ function sA:EditAura(id)
     ed.inRaid:SetWidth(16)
     ed.inRaid:SetHeight(16)
     ed.inRaid:SetPoint("TOPLEFT", ed.outCombat, "BOTTOMLEFT", 0, -15)
-    sA:SkinFrame(ed.inRaid, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.inRaid, {0.15,0.15,0.15,1})
     ed.inRaid:SetScript("OnEnter", function() ed.inRaid:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.inRaid:SetScript("OnLeave", function() ed.inRaid:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.inRaid)
@@ -1129,7 +1129,7 @@ function sA:EditAura(id)
     ed.inRaid:SetScript("OnClick", function(self)
       ed.inRaid.value = 1 - (ed.inRaid.value or 0)
       if ed.inRaid.value == 1 then ed.inRaid.checked:Show() else ed.inRaid.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.inraidLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.inraidLabel:SetPoint("LEFT", ed.inRaid, "RIGHT", 5, 1)
@@ -1140,7 +1140,7 @@ function sA:EditAura(id)
     ed.invert:SetWidth(16)
     ed.invert:SetHeight(16)
     ed.invert:SetPoint("BOTTOMLEFT", ed, "BOTTOMLEFT", 12.5, 40)
-    sA:SkinFrame(ed.invert, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.invert, {0.15,0.15,0.15,1})
     ed.invert:SetScript("OnEnter", function() ed.invert:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.invert:SetScript("OnLeave", function() ed.invert:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.invert)
@@ -1155,7 +1155,7 @@ function sA:EditAura(id)
     ed.invert:SetScript("OnClick", function(self)
       ed.invert.value = 1 - (ed.invert.value or 0)
       if ed.invert.value == 1 then ed.invert.checked:Show() else ed.invert.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.invertLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.invertLabel:SetPoint("LEFT", ed.invert, "RIGHT", 5, 0)
@@ -1165,7 +1165,7 @@ function sA:EditAura(id)
     ed.dual:SetWidth(16)
     ed.dual:SetHeight(16)
     ed.dual:SetPoint("LEFT", ed.invert, "LEFT", 228, 0)
-    sA:SkinFrame(ed.dual, {0.15,0.15,0.15,1})
+    A:SkinFrame(ed.dual, {0.15,0.15,0.15,1})
     ed.dual:SetScript("OnEnter", function() ed.dual:SetBackdropColor(0.5,0.5,0.5,1) end)
     ed.dual:SetScript("OnLeave", function() ed.dual:SetBackdropColor(0.15,0.15,0.15,1) end)
     UI.Check(ed.dual)
@@ -1180,7 +1180,7 @@ function sA:EditAura(id)
     ed.dual:SetScript("OnClick", function(self)
       ed.dual.value = 1 - (ed.dual.value or 0)
       if ed.dual.value == 1 then ed.dual.checked:Show() else ed.dual.checked:Hide() end
-	  sA:SaveAura(gui.auraEdit)
+	  A:SaveAura(gui.auraEdit)
     end)
     ed.dualLabel = ed:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.dualLabel:SetPoint("LEFT", ed.dual, "RIGHT", 5, 0)
@@ -1201,7 +1201,7 @@ function sA:EditAura(id)
     ed.delete:SetPoint("BOTTOM", 0, 8)
     ed.delete:SetWidth(100)
     ed.delete:SetHeight(20)
-    sA:SkinFrame(ed.delete, {0.2,0.2,0.2,1})
+    A:SkinFrame(ed.delete, {0.2,0.2,0.2,1})
     ed.delete.text = ed.delete:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.delete.text:SetPoint("CENTER", ed.delete, "CENTER", 0, 0)
     ed.delete.text:SetText(L.DELETE)
@@ -1212,7 +1212,7 @@ function sA:EditAura(id)
     ed.copy:SetPoint("TOPLEFT", 2, -2)
     ed.copy:SetWidth(20)
     ed.copy:SetHeight(20)
-    sA:SkinFrame(ed.copy, {0.2,0.2,0.2,1})
+    A:SkinFrame(ed.copy, {0.2,0.2,0.2,1})
     ed.copy.text = ed.copy:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.copy.text:SetPoint("CENTER", 0.5, 1)
     ed.copy.text:SetText("c")
@@ -1224,7 +1224,7 @@ function sA:EditAura(id)
     ed.export:SetPoint("TOPLEFT", ed.copy, "TOPRIGHT", 5, 0)
     ed.export:SetWidth(20)
     ed.export:SetHeight(20)
-    sA:SkinFrame(ed.export, {0.2,0.2,0.2,1})
+    A:SkinFrame(ed.export, {0.2,0.2,0.2,1})
     ed.export.text = ed.export:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ed.export.text:SetPoint("CENTER", 0.5, 1)
     ed.export.text:SetText("e")
@@ -1251,7 +1251,7 @@ function sA:EditAura(id)
   ed.showCD:SetShown(aura.type == "Cooldown")
 
   -- Populate fields with aura values
-  sA:SetAuraWindowPortrait(ed,id)
+  A:SetAuraWindowPortrait(ed,id)
   ed.title:SetText("[" .. tostring(gui.auraEdit) .. "] " .. (aura.name ~= "" and aura.name or L.UNNAMED))
   ed.enabled.value = aura.enabled or 1
   if ed.enabled.value == 1 then ed.enabled.checked:Show() else ed.enabled.checked:Hide() end
@@ -1267,7 +1267,7 @@ function sA:EditAura(id)
   ed.autoDetect.value = aura.autodetect or 0
   if ed.autoDetect.value == 1 then ed.autoDetect.checked:Show() else ed.autoDetect.checked:Hide() end
 
-  sA:UpdateDetectedTexture(aura)
+  A:UpdateDetectedTexture(aura)
   ed.texturePath:SetText(aura.texture or "")
   ed.scale:SetText(aura.scale or 1)
   ed.x:SetText(aura.xpos or 0)
@@ -1282,7 +1282,7 @@ function sA:EditAura(id)
   ed.onlyWithTarget.value = aura.onlyWithTarget or 0
   ed.onlyWithTarget.checked:SetShown(ed.onlyWithTarget.value == 1)
   ed.targetType.value = aura.targetType or "Any"
-  UI.DropdownLabel(ed.targetType,sA:LocalizeValue(ed.targetType.value))
+  UI.DropdownLabel(ed.targetType,A:LocalizeValue(ed.targetType.value))
   ed.targetType:SetEnabled(ed.onlyWithTarget.value == 1)
   ed.targetType:SetAlpha(ed.onlyWithTarget.value == 1 and 1 or 0.5)
 
@@ -1293,14 +1293,14 @@ function sA:EditAura(id)
   ed.lowdurationcolorpicker.prev:SetColorTexture(unpack(ed.lowdurationcolor))
 
   ed.typeButton.value = aura.type or "Buff"
-  UI.DropdownLabel(ed.typeButton,sA:LocalizeValue(ed.typeButton.value))
+  UI.DropdownLabel(ed.typeButton,A:LocalizeValue(ed.typeButton.value))
   if ed.unitButton then
 	ed.unitButton.value = aura.unit or "Player"
-  UI.DropdownLabel(ed.unitButton,sA:LocalizeValue(ed.unitButton.value))
+  UI.DropdownLabel(ed.unitButton,A:LocalizeValue(ed.unitButton.value))
   end
   if ed.showCD then
 	ed.showCD.value = aura.showCD or "Always"
-  UI.DropdownLabel(ed.showCD,sA:LocalizeValue(ed.showCD.value))
+  UI.DropdownLabel(ed.showCD,A:LocalizeValue(ed.showCD.value))
   end
   ed.inCombat.value = aura.inCombat or 0
   if ed.inCombat.value == 1 then ed.inCombat.checked:Show() else ed.inCombat.checked:Hide() end
@@ -1315,58 +1315,58 @@ function sA:EditAura(id)
   ed.dual.value = aura.dual or 0
   if ed.dual.value == 1 then ed.dual.checked:Show() else ed.dual.checked:Hide() end
 
-  ed.export:SetScript("OnClick", function() sA:ExportSingleAura(gui.auraEdit) end)
+  ed.export:SetScript("OnClick", function() A:ExportSingleAura(gui.auraEdit) end)
 
   -- Show Test aura(s)
-  sA:AnchorPreview(sA.TestAura,aura.xpos or 0,aura.ypos or 0)
-  local displaySize=sA:AuraDisplaySize(aura)
-  sA.TestAura:SetSize(displaySize,displaySize)
-  sA.TestAura:SetFrameLevel(sA:AuraFrameLevel(gui.auraEdit)+4)
-  sA:CenterAuraTimer(sA.TestAura.durationtext,sA.TestAura)
-  local _,spellIcon=sA:Spell(aura.name)
-  local source=sA:TextureSource(aura,spellIcon)
-  sA.TestAura.texture:SetTexture(source)
-  sA:StyleTexture(sA.TestAura,sA.TestAura.texture,aura,false,source)
-  sA.TestAura.texture:SetVertexColor(unpack(aura.auracolor or {1,1,1,1}))
-  if aura.duration == 1 then sA.TestAura.durationtext:SetText("60") sA.TestAura.durationtext:SetFont("Fonts\\FRIZQT__.TTF", sA:AuraTextSize(aura,false), "OUTLINE") else sA.TestAura.durationtext:SetText("") end
-  sA:AnchorAuraStacks(sA.TestAura.stackstext,sA.TestAura,aura)
-  if aura.stacks == 1 then sA.TestAura.stackstext:SetText("20") sA.TestAura.stackstext:SetFont("Fonts\\FRIZQT__.TTF", sA:AuraTextSize(aura,true), "OUTLINE") else sA.TestAura.stackstext:SetText("") end
+  A:AnchorPreview(A.TestAura,aura.xpos or 0,aura.ypos or 0)
+  local displaySize=A:AuraDisplaySize(aura)
+  A.TestAura:SetSize(displaySize,displaySize)
+  A.TestAura:SetFrameLevel(A:AuraFrameLevel(gui.auraEdit)+4)
+  A:CenterAuraTimer(A.TestAura.durationtext,A.TestAura)
+  local _,spellIcon=A:Spell(aura.name)
+  local source=A:TextureSource(aura,spellIcon)
+  A.TestAura.texture:SetTexture(source)
+  A:StyleTexture(A.TestAura,A.TestAura.texture,aura,false,source)
+  A.TestAura.texture:SetVertexColor(unpack(aura.auracolor or {1,1,1,1}))
+  if aura.duration == 1 then A.TestAura.durationtext:SetText("60") A.TestAura.durationtext:SetFont("Fonts\\FRIZQT__.TTF", A:AuraTextSize(aura,false), "OUTLINE") else A.TestAura.durationtext:SetText("") end
+  A:AnchorAuraStacks(A.TestAura.stackstext,A.TestAura,aura)
+  if aura.stacks == 1 then A.TestAura.stackstext:SetText("20") A.TestAura.stackstext:SetFont("Fonts\\FRIZQT__.TTF", A:AuraTextSize(aura,true), "OUTLINE") else A.TestAura.stackstext:SetText("") end
 	  
 	  local _, _, _, durationalpha = unpack(aura.auracolor or {1,1,1,1})
 	  local durationcolor = {1, 1, 1, durationalpha}
 	  local stackcolor = {1, 1, 1, durationalpha}
 
-	  sA.TestAura.durationtext:SetTextColor(unpack(durationcolor))
-	  sA.TestAura.stackstext:SetTextColor(unpack(stackcolor))
-	  sA.TestAuraDual.durationtext:SetTextColor(unpack(durationcolor))
-	  sA.TestAuraDual.stackstext:SetTextColor(unpack(stackcolor))
+	  A.TestAura.durationtext:SetTextColor(unpack(durationcolor))
+	  A.TestAura.stackstext:SetTextColor(unpack(stackcolor))
+	  A.TestAuraDual.durationtext:SetTextColor(unpack(durationcolor))
+	  A.TestAuraDual.stackstext:SetTextColor(unpack(stackcolor))
 	  
-  sA.TestAura:Show()
+  A.TestAura:Show()
   
   if aura.dual == 1 and aura.type ~= "Cooldown" then
-    sA:AnchorPreview(sA.TestAuraDual,-(aura.xpos or 0),aura.ypos or 0)
-    sA.TestAuraDual:SetSize(displaySize,displaySize)
-    sA.TestAuraDual:SetFrameLevel(sA:AuraFrameLevel(gui.auraEdit)+4)
-    sA:CenterAuraTimer(sA.TestAuraDual.durationtext,sA.TestAuraDual)
-    sA.TestAuraDual.texture:SetTexture(source)
-    sA:StyleTexture(sA.TestAuraDual,sA.TestAuraDual.texture,aura,true,source)
-    sA.TestAuraDual.texture:SetVertexColor(unpack(aura.auracolor or {1,1,1,1}))
-    if aura.duration == 1 then sA.TestAuraDual.durationtext:SetText("60") sA.TestAuraDual.durationtext:SetFont("Fonts\\FRIZQT__.TTF", sA:AuraTextSize(aura,false), "OUTLINE") else sA.TestAuraDual.durationtext:SetText("") end
-    sA:AnchorAuraStacks(sA.TestAuraDual.stackstext,sA.TestAuraDual,aura)
-    if aura.stacks == 1 then sA.TestAuraDual.stackstext:SetText("20") sA.TestAuraDual.stackstext:SetFont("Fonts\\FRIZQT__.TTF", sA:AuraTextSize(aura,true), "OUTLINE") else sA.TestAuraDual.stackstext:SetText("") end
-    sA.TestAuraDual:Show()
+    A:AnchorPreview(A.TestAuraDual,-(aura.xpos or 0),aura.ypos or 0)
+    A.TestAuraDual:SetSize(displaySize,displaySize)
+    A.TestAuraDual:SetFrameLevel(A:AuraFrameLevel(gui.auraEdit)+4)
+    A:CenterAuraTimer(A.TestAuraDual.durationtext,A.TestAuraDual)
+    A.TestAuraDual.texture:SetTexture(source)
+    A:StyleTexture(A.TestAuraDual,A.TestAuraDual.texture,aura,true,source)
+    A.TestAuraDual.texture:SetVertexColor(unpack(aura.auracolor or {1,1,1,1}))
+    if aura.duration == 1 then A.TestAuraDual.durationtext:SetText("60") A.TestAuraDual.durationtext:SetFont("Fonts\\FRIZQT__.TTF", A:AuraTextSize(aura,false), "OUTLINE") else A.TestAuraDual.durationtext:SetText("") end
+    A:AnchorAuraStacks(A.TestAuraDual.stackstext,A.TestAuraDual,aura)
+    if aura.stacks == 1 then A.TestAuraDual.stackstext:SetText("20") A.TestAuraDual.stackstext:SetFont("Fonts\\FRIZQT__.TTF", A:AuraTextSize(aura,true), "OUTLINE") else A.TestAuraDual.stackstext:SetText("") end
+    A.TestAuraDual:Show()
   else
-    sA.TestAuraDual:Hide()
+    A.TestAuraDual:Hide()
   end
 
   for _,key in ipairs({"enabled","myCast","autoDetect","duration","stacks","onlyWithTarget","lowduration","inCombat","outCombat","inParty","inRaid","invert","dual"}) do ed[key]:SetChecked(ed[key].value == 1) end
 
   -- Editor button handlers
-  ed.windowStyle.CloseButton:SetScript("OnClick", function() ed:Hide(); gui.editor = nil; sA.TestAura:Hide(); sA.TestAuraDual:Hide(); gui.auraEdit = nil; sA:RefreshAuraList(); end)
-  ed.copy:SetScript("OnClick", function() sA:AddAura(gui.auraEdit) end)
+  ed.windowStyle.CloseButton:SetScript("OnClick", function() ed:Hide(); gui.editor = nil; A.TestAura:Hide(); A.TestAuraDual:Hide(); gui.auraEdit = nil; A:RefreshAuraList(); end)
+  ed.copy:SetScript("OnClick", function() A:AddAura(gui.auraEdit) end)
 
   ed.delete:SetScript("OnClick", function()
-    if ed.confirm then sA:SetAuraWindowPortrait(ed.confirm,gui.auraEdit); ed.confirm.msg:SetText(string.format(L.DELETE_AURA_CONFIRM, gui.auraEdit, yAurasDB.auras[gui.auraEdit].name or L.UNNAMED)); ed.confirm:Show(); return end
+    if ed.confirm then A:SetAuraWindowPortrait(ed.confirm,gui.auraEdit); ed.confirm.msg:SetText(string.format(L.DELETE_AURA_CONFIRM, gui.auraEdit, yAurasDB.auras[gui.auraEdit].name or L.UNNAMED)); ed.confirm:Show(); return end
     ed.confirm = CreateFrame("Frame", nil, UIParent)
     ed.confirm:EnableMouse(true)
     ed.confirm:SetMovable(true)
@@ -1375,7 +1375,7 @@ function sA:EditAura(id)
     ed.confirm:SetPoint("CENTER", ed, "CENTER", 0, 0)
     ed.confirm:SetWidth(250)
     ed.confirm:SetHeight(80)
-    sA:StyleWindow(ed.confirm, sA.title)
+    A:StyleWindow(ed.confirm, A.title)
     -- Keep the entire dialog chrome above the editor, including its portrait.
     local level=ed:GetFrameLevel()+20
     ed.confirm:SetFrameLevel(level)
@@ -1422,7 +1422,7 @@ function sA:EditAura(id)
     chrome:HookScript("OnSizeChanged",updateDialogCorners)
     chrome:HookScript("OnShow",function(self)updateDialogCorners(self)end)
     updateDialogCorners(chrome)
-    sA:SetAuraWindowPortrait(ed.confirm,gui.auraEdit)
+    A:SetAuraWindowPortrait(ed.confirm,gui.auraEdit)
     local msg = ed.confirm:CreateFontString(nil, "OVERLAY", "GameFontWhite")
     ed.confirm.msg = msg
     msg:SetPoint("TOP", 0, -20)
@@ -1433,7 +1433,7 @@ function sA:EditAura(id)
     yes:SetPoint("BOTTOMLEFT", 30, 10)
     yes:SetWidth(60)
     yes:SetHeight(20)
-    sA:SkinFrame(yes, {0.2,0.2,0.2,1})
+    A:SkinFrame(yes, {0.2,0.2,0.2,1})
     yes.text = yes:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     yes.text:SetPoint("CENTER", yes, "CENTER", 0, 0)
     yes.text:SetText(L.YES)
@@ -1441,22 +1441,22 @@ function sA:EditAura(id)
     yes:SetScript("OnLeave", function() yes:SetBackdropColor(0.2,0.2,0.2,1) end)
     yes:SetScript("OnClick", function()
       table.remove(yAurasDB.auras, gui.auraEdit)
-      sA:InvalidateAll()
-      sA:Refresh()
+      A:InvalidateAll()
+      A:Refresh()
       ed.confirm:Hide()
       ed:Hide()
       gui.editor = nil
       gui.auraEdit = nil
-      sA:RefreshAuraList()
-      sA.TestAura:Hide()
-      sA.TestAuraDual:Hide()
+      A:RefreshAuraList()
+      A.TestAura:Hide()
+      A.TestAuraDual:Hide()
     end)
 
     local no = CreateFrame("Button", nil, ed.confirm)
     no:SetPoint("BOTTOMRIGHT", -30, 10)
     no:SetWidth(60)
     no:SetHeight(20)
-    sA:SkinFrame(no, {0.2,0.2,0.2,1})
+    A:SkinFrame(no, {0.2,0.2,0.2,1})
     no.text = no:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     no.text:SetPoint("CENTER", no, "CENTER", 0, 0)
     no.text:SetText(L.NO)
@@ -1465,25 +1465,25 @@ function sA:EditAura(id)
     no:SetScript("OnClick", function() ed.confirm:Hide() end)
   end)
 
-  ed.auracolorpicker:SetScript("OnClick", function() sA:PickColor("auracolor") end)
-  ed.lowdurationcolorpicker:SetScript("OnClick", function() sA:PickColor("lowdurationcolor") end)
+  ed.auracolorpicker:SetScript("OnClick", function() A:PickColor("auracolor") end)
+  ed.lowdurationcolorpicker:SetScript("OnClick", function() A:PickColor("lowdurationcolor") end)
 
   -- Browse textures
   ed.browseBtn:SetScript("OnClick", function(self)
     if ed.browseFrame then
       ed.browseFrame.selectedTexture=ed.texturePath:GetText()
-      sA:SetAuraWindowPortrait(ed.browseFrame,gui.auraEdit)
+      A:SetAuraWindowPortrait(ed.browseFrame,gui.auraEdit)
       ed.browseFrame:UpdateSelection();ed.browseFrame:Show();return
     end
     local bf = CreateFrame("Frame", "yAurasTextureBrowser", UIParent)
-    sA:AddEscapeWindow("yAurasTextureBrowser")
+    A:AddEscapeWindow("yAurasTextureBrowser")
     bf:SetMovable(true)
     bf:EnableMouse(true)
     bf:SetSize(300,450)
     bf:SetPoint("CENTER",UIParent,"CENTER",0,0)
     bf:SetFrameStrata("DIALOG")
-    sA:StyleWindow(bf, L.SELECT_TEXTURE)
-    sA:SetAuraWindowPortrait(bf,gui.auraEdit)
+    A:StyleWindow(bf, L.SELECT_TEXTURE)
+    A:SetAuraWindowPortrait(bf,gui.auraEdit)
     ed.browseFrame = bf
 
     bf.title = bf:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -1495,7 +1495,7 @@ function sA:EditAura(id)
     close:SetWidth(20)
     close:SetHeight(20)
     close:SetPoint("TOPRIGHT", -2, -2)
-    sA:SkinFrame(close, {0.2,0.2,0.2,1})
+    A:SkinFrame(close, {0.2,0.2,0.2,1})
     close.text = close:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     close.text:SetPoint("CENTER", close, "CENTER", 0, 0)
     close.text:SetText("x")
@@ -1545,7 +1545,7 @@ function sA:EditAura(id)
       local tex = btn:CreateTexture(nil, "ARTWORK")
       tex:SetAllPoints(btn)
       tex:SetTexture("Interface\\AddOns\\yAuras\\Auras\\Aura" .. i)
-      sA:SkinFrame(btn, {0.2,0.2,0.2,1})
+      A:SkinFrame(btn, {0.2,0.2,0.2,1})
       btn.texturePath = "Interface\\AddOns\\yAuras\\Auras\\Aura" .. i
       btn.selected=btn:CreateTexture(nil,"OVERLAY")
       btn.selected:SetPoint("TOPLEFT",btn,"TOPLEFT",-8,8)
@@ -1564,7 +1564,7 @@ function sA:EditAura(id)
     select:SetWidth(80)
     select:SetHeight(20)
     select:SetPoint("BOTTOM", 0, 10)
-    sA:SkinFrame(select, {0.2,0.2,0.2,1})
+    A:SkinFrame(select, {0.2,0.2,0.2,1})
     select:SetScript("OnEnter", function() select:SetBackdropColor(0.5,0.5,0.5,1) end)
     select:SetScript("OnLeave", function() select:SetBackdropColor(0.2,0.2,0.2,1) end)
     select.text = select:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -1575,7 +1575,7 @@ function sA:EditAura(id)
         ed.texturePath:SetText(bf.selectedTexture)
         ed.autoDetect.value=0
         ed.browseFrame:Hide()
-        sA:SaveAura(gui.auraEdit)
+        A:SaveAura(gui.auraEdit)
       end
     end)
 	
@@ -1610,7 +1610,7 @@ function sA:EditAura(id)
 	
   end)
   
-  sA:RefreshAuraList()
+  A:RefreshAuraList()
 
   -- Refresh native selection descriptions after the aura values have been loaded.
   for _,key in ipairs({"typeButton","unitButton","showCD","targetType"}) do
@@ -1621,17 +1621,17 @@ function sA:EditAura(id)
 end
 
 
--- Window lifecycle and the original move gesture (Ctrl+Alt+Shift).
-function sA:OpenEditor()
+-- Window lifecycle and the move gesture (Ctrl+Alt+Shift).
+function A:OpenEditor()
  if not self.loaded then return end
  self.SettingsLoaded = true
  self:KeepEditorIndependent()
  self:CreateTestAuras(); gui:Show(); self:RefreshAuraList(); self:Refresh()
 end
-function sA:LoadFields()
+function A:LoadFields()
  if gui.editor and gui.auraEdit then self:EditAura(gui.auraEdit) end
 end
-function sA:CloseEditor()
+function A:CloseEditor()
  self:StopAuraDrag()
  if self.editor then self.editor:Hide() end
  gui.editor=nil; gui.auraEdit=nil
@@ -1639,20 +1639,20 @@ function sA:CloseEditor()
  for _,handle in pairs(self.draggers) do handle:Hide() end
  self.moveAuras=false; self.preview=false
 end
-gui:SetScript("OnHide",function() sA:CloseEditor(); sA:Refresh() end)
-sA.editorUpdate = CreateFrame("Frame")
-sA.editorUpdate:SetScript("OnUpdate",function()
- if not sA.loaded then return end
+gui:SetScript("OnHide",function() A:CloseEditor(); A:Refresh() end)
+A.editorUpdate = CreateFrame("Frame")
+A.editorUpdate:SetScript("OnUpdate",function()
+ if not A.loaded then return end
  local moving = gui:IsShown() and IsControlKeyDown() and IsAltKeyDown() and IsShiftKeyDown()
- if moving ~= sA.moveAuras then
-  if not moving then sA:StopAuraDrag() end
-  sA.moveAuras=moving; gui:SetAlpha(moving and 0 or 1)
+ if moving ~= A.moveAuras then
+  if not moving then A:StopAuraDrag() end
+  A.moveAuras=moving; gui:SetAlpha(moving and 0 or 1)
   if gui.editor then gui.editor:SetAlpha(moving and 0 or 1) end
-  if sA.draggers[0] then sA.draggers[0]:SetShown(moving and gui.editor~=nil) end
-  sA:Refresh()
+  if A.draggers[0] then A.draggers[0]:SetShown(moving and gui.editor~=nil) end
+  A:Refresh()
  end
 end)
-function sA:PickColor(key)
+function A:PickColor(key)
  local id=gui.auraEdit; local ed=gui.editor
  if not id or not ed then return end
  local owner=yAurasDB.auras[id]; local original=self:Copy(owner[key])
@@ -1674,7 +1674,7 @@ function sA:PickColor(key)
  swatchFunc=changed,opacityFunc=changed,cancelFunc=function() apply(original) end})
 end
 
-function sA:RegisterSettings()
+function A:RegisterSettings()
  if not Settings or not Settings.RegisterCanvasLayoutCategory then return end
  local optionsTitle = "|cff4b7dccy|rAuras"
  local p = CreateFrame("Frame")
@@ -1705,7 +1705,7 @@ function sA:RegisterSettings()
  open:SetText(L.OPEN_EDITOR)
  p.openEditor = open
  open:SetScript("OnClick", function()
-  if not sA.enabled then return end
+  if not A.enabled then return end
   if SettingsPanel and SettingsPanel:IsShown() then
    if HideUIPanel then HideUIPanel(SettingsPanel) else SettingsPanel:Hide() end
   end
@@ -1717,7 +1717,7 @@ function sA:RegisterSettings()
    if GameMenuFrame then
     if HideUIPanel then HideUIPanel(GameMenuFrame) else GameMenuFrame:Hide() end
    end
-   sA:OpenEditor()
+   A:OpenEditor()
   end)
  end)
 
@@ -1728,18 +1728,18 @@ function sA:RegisterSettings()
  zoomText:SetText(L.ZOOM_ICONS_SQUARE_1PX_BLACK_BORDER)
  UI.Check(enable);UI.Check(zoom)
  local function RefreshForm()
-  enable:SetChecked(sA.enabled)
-  controls:SetShown(sA.enabled)
-  zoom:SetChecked(sA:ZoomIcons())
+  enable:SetChecked(A.enabled)
+  controls:SetShown(A.enabled)
+  zoom:SetChecked(A:ZoomIcons())
  end
  p.RefreshForm = RefreshForm
  self.settingsPanel = p
  self.zoomCheckbox = zoom
  enable:SetScript("OnClick", function(self)
-  sA:SetEnabled(self:GetChecked() and true or false)
+  A:SetEnabled(self:GetChecked() and true or false)
  end)
  zoom:SetScript("OnClick", function(self)
-  sA:SetZoomIcons(self:GetChecked())
+  A:SetZoomIcons(self:GetChecked())
   RefreshForm()
  end)
  p:SetScript("OnShow", RefreshForm)
