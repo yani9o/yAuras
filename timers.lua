@@ -123,14 +123,10 @@ function A:SetTimer(f,rule,object,endTime,remaining,preview)
 end
 function A:LayoutIconSwipe(swipe,parent,rule)
  swipe:ClearAllPoints()
- if self:ZoomIcons() then
-  swipe:SetAllPoints(parent)
- else
-  -- Match the default action button's cooldown opening, inside its bevel.
-  local inset=3*(rule.scale or 1)
-  swipe:SetPoint("TOPLEFT",parent,"TOPLEFT",inset,-inset)
-  swipe:SetPoint("BOTTOMRIGHT",parent,"BOTTOMRIGHT",-inset,inset)
- end
+ -- Keep the zoomed swipe inside the one-pixel outline.
+ local inset=self:ZoomIcons() and self:IconPixelSize(parent) or 3*(rule.scale or 1)
+ swipe:SetPoint("TOPLEFT",parent,"TOPLEFT",inset,-inset)
+ swipe:SetPoint("BOTTOMRIGHT",parent,"BOTTOMRIGHT",-inset,inset)
 end
 function A:CreateIconSwipe(parent,rule,level)
  local swipe=CreateFrame("Cooldown",nil,parent,"CooldownFrameTemplate")
@@ -140,6 +136,54 @@ function A:CreateIconSwipe(parent,rule,level)
  swipe:SetDrawSwipe(true);swipe:SetSwipeColor(0,0,0,.65)
  swipe:SetReverse(rule.type~="Cooldown");swipe:EnableMouse(false)
  return swipe
+end
+local cooldownFlashSeconds=1
+function A:ClearCooldownFlash(f)
+ f.flashRule=nil;f.flashSpell=nil;f.flashEnd=nil;f.flashObject=nil;f.flashUntil=nil
+ if f.flash then f.flash:Hide();f.flash:Clear() end
+end
+function A:IsCooldownFlashing(f,now)
+ return (f.flashUntil and now<f.flashUntil) or
+  (f.flashEnd and now>=f.flashEnd and now<f.flashEnd+cooldownFlashSeconds)
+end
+function A:UpdateCooldownFlash(f,rule,object,endTime,now)
+ if f.flashRule~=rule or f.flashSpell~=rule.name then self:ClearCooldownFlash(f) end
+ -- Leave the flash frame alone on a ready update so the animation can finish.
+ if endTime and endTime<=now then return end
+ if not object and not endTime then return end
+ if not f.flash then
+  -- A sibling of the aura: "only on cooldown" and secret visibility gates
+  -- may hide the icon on the very frame the completion animation starts.
+  local flash=CreateFrame("Cooldown",nil,UIParent,"CooldownFrameTemplate")
+  flash:SetFrameStrata("BACKGROUND");flash:SetDrawSwipe(false)
+  flash:SetDrawEdge(false);flash:SetDrawBling(true)
+  flash:SetHideCountdownNumbers(true);flash:EnableMouse(false)
+  flash:HookScript("OnCooldownDone",function()
+   if not f.flashRule or f.flashRule.showCD~="CD" then return end
+   f.flashUntil=GetTime()+cooldownFlashSeconds
+   if f.used then self:ClearCooldownGate(f) end
+  end)
+  f.flash=flash
+ end
+ local flash=f.flash
+ local zoom=self:ZoomIcons()
+ if f.flashZoom~=zoom or f.flashRule~=rule or f.flashX~=rule.xpos or f.flashY~=rule.ypos or f.flashScale~=rule.scale or f.flashLevel~=f.id then
+  local size=self:AuraDisplaySize(rule)
+  local inset=zoom and self:IconPixelSize(f) or 3*(rule.scale or 1)
+  flash:ClearAllPoints();flash:SetPoint("CENTER",UIParent,"CENTER",rule.xpos,rule.ypos)
+  flash:SetSize(size-2*inset,size-2*inset);flash:SetFrameLevel(self:AuraFrameLevel(f.id)+5)
+  f.flashX,f.flashY,f.flashScale,f.flashLevel,f.flashZoom=rule.xpos,rule.ypos,rule.scale,f.id,zoom
+ end
+ f.flashRule,f.flashSpell=rule,rule.name
+ flash:Show()
+ if endTime then
+  if f.flashEnd~=endTime then flash:SetCooldown(now,endTime-now) end
+ elseif f.flashObject~=object or f.flashEnd then
+  -- Keep the prior animation when an opaque duration resolves to zero.
+  local ok,err=pcall(flash.SetCooldownFromDurationObject,flash,object,false)
+  if not ok then self.nativeError=L.ICON_SWIPE..tostring(err) end
+ end
+ f.flashEnd,f.flashObject=endTime,object
 end
 function A:SetIconSwipe(f,rule,source,object,preview)
  f.artworkParent:SetFrameLevel(f:GetFrameLevel()-2)
@@ -190,6 +234,9 @@ local function recordColorError(err)
 end
 -- Inline texture markup can carry its own static RGB tint. The engine selects
 -- the markup/alpha for the current remaining time; Lua never reads that state.
+local function InlineIconSize(size)
+ return math.max(1,math.floor(size+.5))
+end
 function A:TextureMarkup(rule,mirror,color)
  local _,spellIcon=self:Spell(rule.name)
  local source=self:TextureSource(rule,spellIcon)
@@ -197,7 +244,7 @@ function A:TextureMarkup(rule,mirror,color)
  local isIcon=self:IsSpellIcon(rule,source)
  local zoom=isIcon and A:ZoomIcons()
  local lo,hi=zoom and 800 or 0,zoom and 9200 or 10000
- local size=math.max(1,math.floor(self:AuraDisplaySize(rule)+.5))
+ local size=InlineIconSize(self:AuraDisplaySize(rule))
  return ("|T%s:%d:%d:0:0:10000:10000:%d:%d:%d:%d:%d:%d:%d|t"):format(
   tostring(source),size,size,mirror and hi or lo,mirror and lo or hi,lo,hi,
   math.floor(color[1]*255+.5),math.floor(color[2]*255+.5),math.floor(color[3]*255+.5))
@@ -232,14 +279,17 @@ function A:AttachNativeTextureColor(rule,host,filter,ids,mirror,candidates,sortM
    A:DisableAuraInteraction(button)
    button:SetFrameLevel(host:GetFrameLevel()+2)
    local size=A:AuraDisplaySize(rule)
-   driver.button=button;button:SetSize(size,size);button:SetPoint("CENTER",host,"CENTER")
+   driver.button=button;button:SetSize(size,size)
+   local zoom=A:ZoomIcons()
+   if zoom then button:ClearAllPoints() end
+   button:SetPoint("CENTER",host,"CENTER")
    local parent=button
    local _,spellIcon=A:Spell(rule.name)
    if A:IsSpellIcon(rule,A:TextureSource(rule,spellIcon)) then
     -- Inline text layout can extend a fraction beyond its nominal image size.
-    -- Clip the artwork to the exact square that the outside border surrounds.
+    -- Clip the artwork to the same bounds as the icon.
     parent=CreateFrame("Frame",nil,button,"DisableUntrustedLayoutScriptsTemplate")
-    if A:ZoomIcons() then
+    if zoom then
      parent:SetAllPoints(button)
     else
      -- Inline FontString artwork cannot take a Texture mask. Keep it inside
@@ -250,6 +300,16 @@ function A:AttachNativeTextureColor(rule,host,filter,ids,mirror,candidates,sortM
     end
     parent:SetClipsChildren(true)
     parent:SetFrameLevel(button:GetFrameLevel());driver.iconClip=parent
+    if zoom then
+     -- Markup dimensions are integers. Scale just the centered artwork back
+     -- to the exact size used by the icon, leaving the clip at full size.
+     local inlineSize=InlineIconSize(size)
+     local artwork=CreateFrame("Frame",nil,parent)
+     artwork:SetSize(inlineSize,inlineSize)
+     artwork:SetScale(size/inlineSize)
+     artwork:SetPoint("CENTER",parent,"CENTER")
+     parent=artwork
+    end
    end
    local text=parent:CreateFontString(nil,"ARTWORK");driver.source=text
    text:SetFont("Fonts\\FRIZQT__.TTF",12,"");text:SetPoint("CENTER",parent,"CENTER");text:SetWordWrap(false)

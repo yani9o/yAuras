@@ -892,7 +892,7 @@ function A:EditAura(id)
     UI.DropdownLayout(ed.unitButton)
     ed.unitButton:SetSelectionText(function() return A:LocalizeValue(ed.unitButton.value) or "" end)
     ed.unitButton:SetupMenu(function(_,root)
-      for _,value in ipairs({"Player","Target","Focus","TargetTarget","Friendly","Enemy"}) do
+      for _,value in ipairs({"Player","Target","Focus","TargetTarget","Pet","Friendly","Enemy"}) do
         local choice=value
         root:CreateRadio(A:LocalizeValue(choice),function() return ed.unitButton.value==choice end,function()
           ed.unitButton.value=choice

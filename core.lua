@@ -214,7 +214,7 @@ function A:Conditions(rule)
  return combatOK and groupOK
 end
 function A:IsDeadAuraUnit(rule)
- if rule.type=="Cooldown" or (self:AuraUnit(rule)~="target" and self:AuraUnit(rule)~="focus" and self:AuraUnit(rule)~="targettarget") then return false end
+ if rule.type=="Cooldown" or (self:AuraUnit(rule)~="target" and self:AuraUnit(rule)~="focus" and self:AuraUnit(rule)~="targettarget" and self:AuraUnit(rule)~="pet") then return false end
  local dead,ok=safe(UnitIsDeadOrGhost,A:AuraUnit(rule))
  return ok and public(dead) and dead==true
 end
@@ -287,21 +287,20 @@ function A:StyleTexture(owner,texture,rule,mirror,source)
   local defaultBorder=texture.defaultIconBorder
   defaultBorder:ClearAllPoints()
   defaultBorder:SetPoint("TOPLEFT",texture,"TOPLEFT",0,0)
-  -- Blizzard's 45-unit action button uses a 46 x 45 normal border atlas.
   local size=self:AuraDisplaySize(rule)
   defaultBorder:SetSize(size*46/45,size)
   defaultBorder:SetShown(isIcon and not zoom)
   for i,edge in ipairs(texture.iconBorder) do
    edge:ClearAllPoints()
-   -- Outside the artwork: never cover the outer row/column of icon pixels.
+   -- Keep the outline within the same footprint in both icon styles.
    if i==1 then
-    edge:SetPoint("BOTTOMLEFT",texture,"TOPLEFT",-pixel,0);edge:SetPoint("BOTTOMRIGHT",texture,"TOPRIGHT",pixel,0);edge:SetHeight(pixel)
+    edge:SetPoint("TOPLEFT",texture,"TOPLEFT");edge:SetPoint("TOPRIGHT",texture,"TOPRIGHT");edge:SetHeight(pixel)
    elseif i==2 then
-    edge:SetPoint("TOPLEFT",texture,"BOTTOMLEFT",-pixel,0);edge:SetPoint("TOPRIGHT",texture,"BOTTOMRIGHT",pixel,0);edge:SetHeight(pixel)
+    edge:SetPoint("BOTTOMLEFT",texture,"BOTTOMLEFT");edge:SetPoint("BOTTOMRIGHT",texture,"BOTTOMRIGHT");edge:SetHeight(pixel)
    elseif i==3 then
-    edge:SetPoint("TOPRIGHT",texture,"TOPLEFT");edge:SetPoint("BOTTOMRIGHT",texture,"BOTTOMLEFT");edge:SetWidth(pixel)
+    edge:SetPoint("TOPLEFT",texture,"TOPLEFT");edge:SetPoint("BOTTOMLEFT",texture,"BOTTOMLEFT");edge:SetWidth(pixel)
    else
-    edge:SetPoint("TOPLEFT",texture,"TOPRIGHT");edge:SetPoint("BOTTOMLEFT",texture,"BOTTOMRIGHT");edge:SetWidth(pixel)
+    edge:SetPoint("TOPRIGHT",texture,"TOPRIGHT");edge:SetPoint("BOTTOMRIGHT",texture,"BOTTOMRIGHT");edge:SetWidth(pixel)
    end
    edge:SetShown(not not zoom)
   end
@@ -317,7 +316,7 @@ function A:StopAuraDrag()
  if not drag then return end
  self.activeAuraDrag=nil
  local frame=drag.frame
- frame:StopMovingOrSizing();frame.dragging=false
+ frame:StopMovingOrSizing();frame.dragging=false;frame.iconX,frame.iconY=nil,nil
  if drag.preview then frame:SetMovable(false) end
  local x,y=frame:GetCenter();local cx,cy=UIParent:GetCenter()
  local rule=yAurasDB.auras[drag.id]
@@ -358,8 +357,14 @@ end
 function A:Paint(f,rule,icon,remaining,stacks,mirror,durationObject,endTime,cooldownActive)
  f:SetFrameLevel(self:AuraFrameLevel(f.id)+4)
  local scale=rule.scale
- if not f.dragging then f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"CENTER",(mirror and -1 or 1)*rule.xpos,rule.ypos) end
- local size=self:AuraDisplaySize(rule);f:SetSize(size,size)
+ local x,y=(mirror and -1 or 1)*rule.xpos,rule.ypos
+ local zoom=self:ZoomIcons()
+ if not f.dragging and (not zoom or f.iconX~=x or f.iconY~=y) then
+  f:ClearAllPoints();f:SetPoint("CENTER",UIParent,"CENTER",x,y)
+  f.iconX,f.iconY=x,y
+ end
+ local size=self:AuraDisplaySize(rule)
+ if not zoom or f.iconSize~=size then f:SetSize(size,size);f.iconSize=size end
  local source=self:TextureSource(rule,icon) or question
  f.texture:SetTexture(source)
  self:StyleTexture(f,f.texture,rule,mirror,source)
@@ -383,9 +388,10 @@ function A:Refresh()
  for _,rule in ipairs(yAurasDB.auras) do self:UpdateDetectedTexture(rule) end
  self:PrepareNative()
  local now,cache=GetTime(),{}; self.unavailable=0
- for _,pair in pairs(self.frames) do pair.main.used=false; if pair.dual then pair.dual.used=false end end
+ for _,pair in pairs(self.frames) do pair.main.used=false;pair.main.flashUsed=false; if pair.dual then pair.dual.used=false end end
  for i,rule in ipairs(yAurasDB.auras) do
   local show,icon,remaining,stacks,durationObject,endTime,cooldownActive,cooldownUnknown,chargeState=false,nil,nil,nil,nil,nil,nil,false,nil
+  local keepForFlash
   if self.enabled and rule.enabled==1 and rule.name~="" then
    if self.preview or (self.gui and self.gui:IsShown() and not self.gui.editor) then local _,tex=self:Spell(rule.name); show,icon,remaining,stacks=true,tex,600,20
    elseif self:Conditions(rule) and not self:IsDeadAuraUnit(rule) and not (self.gui and self.gui:IsShown() and self.gui.editor) then
@@ -394,7 +400,13 @@ function A:Refresh()
      present,icon,remaining,stacks,unknown,durationObject,endTime,chargeState=self:ReadCooldown(rule,cache,now)
      cooldownActive=present
      cooldownUnknown=unknown
-     show=rule.showCD=="Always" or
+     if (durationObject or endTime or self.frames[i]) and self:IsSpellIcon(rule,self:TextureSource(rule,icon)) then
+      if not self.frames[i] then self.frames[i]={main=self:MakeFrame()} end
+      local f=self.frames[i].main;f.id=i;f.flashUsed=true
+      self:UpdateCooldownFlash(f,rule,durationObject,endTime,now)
+      keepForFlash=rule.showCD=="CD" and self:IsCooldownFlashing(f,now)
+     end
+     show=keepForFlash or rule.showCD=="Always" or
       (unknown and self:CanGateCooldown(durationObject,chargeState)) or
       (not unknown and ((present and rule.showCD=="CD") or (not present and rule.showCD=="No CD")))
     else
@@ -414,13 +426,18 @@ function A:Refresh()
    if not self.frames[i] then self.frames[i]={main=self:MakeFrame()} end
    local pair=self.frames[i]; pair.main.id=i; pair.main.used=true
    self:Paint(pair.main,rule,icon,remaining,stacks,false,durationObject,endTime,cooldownActive)
-   self:SetCooldownGate(pair.main,rule,durationObject,cooldownUnknown,chargeState)
+   if keepForFlash then self:ClearCooldownGate(pair.main)
+   else self:SetCooldownGate(pair.main,rule,durationObject,cooldownUnknown,chargeState) end
    if rule.dual==1 and rule.type~="Cooldown" then
     pair.dual=pair.dual or self:MakeFrame(); pair.dual.id=i;pair.dual.used=true; self:Paint(pair.dual,rule,icon,remaining,stacks,true,durationObject,endTime)
    end
   end
  end
- for _,pair in pairs(self.frames) do if not pair.main.used then self:ClearCooldownGate(pair.main);self:ClearTimer(pair.main);self:ClearTextureDuration(pair.main); pair.main:Hide() end; if pair.dual and not pair.dual.used then self:ClearTimer(pair.dual);self:ClearTextureDuration(pair.dual); pair.dual:Hide() end end
+ for _,pair in pairs(self.frames) do
+  if not pair.main.flashUsed and pair.main.flashRule then self:ClearCooldownFlash(pair.main) end
+  if not pair.main.used then self:ClearCooldownGate(pair.main);self:ClearTimer(pair.main);self:ClearTextureDuration(pair.main);pair.main:Hide() end
+  if pair.dual and not pair.dual.used then self:ClearTimer(pair.dual);self:ClearTextureDuration(pair.dual);pair.dual:Hide() end
+ end
  self:HideUnusedNative()
  self:Schedule()
 end
@@ -438,13 +455,13 @@ function A:Schedule()
 end
 events:SetScript("OnEvent",function(_,ev,unit,castGUID,spellID)
  if ev=="UNIT_HEALTH" or ev=="UNIT_FLAGS" then
-  if unit~="target" and unit~="focus" and unit~="targettarget" then return end
+  if unit~="target" and unit~="focus" and unit~="targettarget" and unit~="pet" then return end
   local dead,ok=safe(UnitIsDeadOrGhost,unit)
   if not ok or not public(dead) or dead~=true then return end
   if A.loaded then A:Refresh();dirty=false end;return
  end
  if ev=="UNIT_TARGET" and unit~="target" then return end
- if ev=="PLAYER_TARGET_CHANGED" or ev=="PLAYER_FOCUS_CHANGED" or ev=="UNIT_TARGET" then
+ if ev=="PLAYER_TARGET_CHANGED" or ev=="PLAYER_FOCUS_CHANGED" or ev=="UNIT_TARGET" or (ev=="UNIT_PET" and unit=="player") then
   if A.loaded then A:SyncNative();A:Refresh();dirty=false end;return
  end
  if ev=="UNIT_AURA" and unit~="player" and unit~="target" and unit~="focus" and unit~="targettarget" and unit~="pet" then return end
@@ -456,7 +473,10 @@ events:SetScript("OnEvent",function(_,ev,unit,castGUID,spellID)
  if ev=="SPELLS_CHANGED" or ev=="PLAYER_REGEN_ENABLED" or ev=="ADDON_RESTRICTION_STATE_CHANGED" or ev=="PLAYER_ENTERING_WORLD" then A:InvalidateAll(); if ev=="SPELLS_CHANGED" then A:LearnSpellBook() end end
  if ev=="PLAYER_REGEN_DISABLED" or ev=="PLAYER_REGEN_ENABLED" or ev=="ADDON_RESTRICTION_STATE_CHANGED" then
   if ev=="PLAYER_REGEN_DISABLED" then A.combatState=true elseif ev=="PLAYER_REGEN_ENABLED" then A.combatState=false end
-  if A.loaded then A:SyncNative();A:Refresh();dirty=false end
+  -- Containers already track live aura/restriction events. Preserve their
+  -- current presence-group layout through combat transitions; resetting it
+  -- here needlessly blanks missing-aura indicators until layout catches up.
+  if A.loaded then A:Refresh();dirty=false end
   return
  end
  dirty=true

@@ -303,17 +303,23 @@ local function makeSide(rule,mirror,id)
   local width=size
   local _,spellIcon=A:Spell(rule.name)
   local source=A:TextureSource(rule,spellIcon)
-  local border=A:IsSpellIcon(rule,source) and (A:ZoomIcons() and A:IconPixelSize(host) or (rule.scale or 1)) or 0
+  local zoom=A:IsSpellIcon(rule,source) and A:ZoomIcons()
+  local border=A:IsSpellIcon(rule,source) and (zoom and A:IconPixelSize(host) or (rule.scale or 1)) or 0
+  local padding=zoom and 2 or 1
+  local presenceWidth=width+padding+2*border
   container:ClearAllPoints(); container:SetPoint("TOPLEFT",host,"TOPLEFT")
   container:AddAuraGroup("presence",filter,{
    candidateFilters=candidates,sortMethod=sortMethod,maxFrameCount=1,
-   layout={elementWidth=width+1+2*border,elementHeight=width},
-   initializeFrame=function(button) button:SetSize(width+1+2*border,width); button:SetAlpha(0); A:DisableAuraInteraction(button) end,
+   layout={elementWidth=presenceWidth,elementHeight=width},
+   initializeFrame=function(button) button:SetSize(presenceWidth,width); button:SetAlpha(0); A:DisableAuraInteraction(button) end,
   })
   local clip=CreateFrame("Frame",nil,host,"DisableUntrustedLayoutScriptsTemplate")
-  clip:SetClipsChildren(true); clip:SetPoint("TOPLEFT",container,"TOPRIGHT",-1-border,border); clip:SetPoint("BOTTOMRIGHT",host,"BOTTOMRIGHT",border,-border)
+  clip:SetClipsChildren(true); clip:SetPoint("TOPLEFT",container,"TOPRIGHT",-padding-border,border); clip:SetPoint("BOTTOMRIGHT",host,"BOTTOMRIGHT",border,-border)
   side.clip=clip
-  local icon=clip:CreateTexture(nil,"ARTWORK"); icon:SetSize(width,width); icon:SetPoint("TOPLEFT",clip,"TOPLEFT",1+border,-border)
+  local icon=clip:CreateTexture(nil,"ARTWORK"); icon:SetSize(width,width)
+  -- The clip decides visibility; its moving edge must not position the icon.
+  if zoom then icon:SetPoint("CENTER",host,"CENTER")
+  else icon:SetPoint("TOPLEFT",clip,"TOPLEFT",1+border,-border) end
   icon:SetTexture(A:TextureSource(rule,spellIcon));icon:SetVertexColor(unpack(rule.auracolor))
   A:StyleTexture(clip,icon,rule,mirror,A:TextureSource(rule,spellIcon));side.texture=icon
   container:SetUnit(A:AuraUnit(rule));container:SetEnabled(true);container:UpdateAllAuras()
@@ -422,7 +428,10 @@ function A:UseNative(i,rule,force)
  if not entry or entry.rule~=rule or #entry.sides==0 or entry.error then return false end
  -- Public out-of-combat reads remain exact and keep learning the profile.
  if entry.approximate and (not locked() or not self:IsAuraRestricted(entry.ids)) then return false end
- if not force and not entry.engaged and not self:IsAuraRestricted(entry.ids) then return false end
+ -- Keep exact missing-aura indicators on their native presence group even
+ -- before combat. Switching from Lua to a cold native group at combat entry
+ -- can briefly leave neither the present nor the missing icon visible.
+ if not force and not entry.engaged and rule.invert~=1 and not self:IsAuraRestricted(entry.ids) then return false end
  local allow=UnitExists(A:AuraUnit(rule)) and not self:IsDeadAuraUnit(rule) and not (self.gui and self.gui:IsShown()) and self.enabled and rule.enabled==1 and rule.name~="" and self:Conditions(rule) and not self.preview and not self.moveAuras and (entry.approximate or self:CanNativeFilter(rule,entry.ids))
  if not allow then return false end
  for _,side in ipairs(entry.sides) do
